@@ -11,8 +11,11 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 
 DATA_PATH_LIST = [
-    '.\\data\\t1r1n'
+    '.\\data\\t1r1n',
+    '.\\data\\t1r2r'
 ]
+
+CORRECTION = 0.5
 
 IMAGES = []
 MEASUREMENTS = []
@@ -25,32 +28,56 @@ for data_path in DATA_PATH_LIST:
 
         reader = csv.reader(csvfile)
         for line in reader:
-            # image
+            # image - center
             source_path = line[0]
             filename = source_path.split('\\')[-1]
             current_path = data_path + '\\IMG\\' + filename
             image = cv2.imread(current_path)
-            IMAGES.append(image[int(image.shape[0] * (1 - 0.618)):, ])
-
-            # measurement
+            crop_offset = int(image.shape[0] * (1 - 0.618))
+            IMAGES.append(image[crop_offset:, ])
             measurement = float(line[3])
             MEASUREMENTS.append(measurement)
 
             # augmenttation - flipped image
             image = cv2.flip(image, 1)
-            IMAGES.append(image[int(image.shape[0] * (1 - 0.618)):, ])
-
-            # augmentation - inversed measurement
+            IMAGES.append(image[crop_offset:, ])
             MEASUREMENTS.append(-measurement)
 
-            print('.', end='')
+            # image - left
+            source_path = line[1]
+            filename = source_path.split('\\')[-1]
+            current_path = data_path + '\\IMG\\' + filename
+            image = cv2.imread(current_path)
+            crop_offset = int(image.shape[0] * (1 - 0.618))
+            IMAGES.append(image[crop_offset:, ])
+            MEASUREMENTS.append(measurement + CORRECTION)
+
+            # augmenttation - flipped image
+            image = cv2.flip(image, 1)
+            IMAGES.append(image[crop_offset:, ])
+            MEASUREMENTS.append(-measurement)
+
+            # image - right
+            source_path = line[2]
+            filename = source_path.split('\\')[-1]
+            current_path = data_path + '\\IMG\\' + filename
+            image = cv2.imread(current_path)
+            crop_offset = int(image.shape[0] * (1 - 0.618))
+            IMAGES.append(image[crop_offset:, ])
+            MEASUREMENTS.append(measurement - CORRECTION)
+
+            # augmenttation - flipped image
+            image = cv2.flip(image, 1)
+            IMAGES.append(image[crop_offset:, ])
+            MEASUREMENTS.append(-measurement)
+
+            print('.', end='', flush=True)
 
 assert IMAGES[0].shape == (99, 320, 3)
-# plt.imshow(IMAGES[0])
-# plt.show()
+for i in range(6):
+    plt.imshow(IMAGES[i])
+    plt.show()
 
-# plt.imshow(IMAGES[1])
-# plt.show()
 
 X_TRAIN = np.array(IMAGES)
 Y_TRAIN = np.array(MEASUREMENTS)
@@ -59,21 +86,21 @@ MODEL = Sequential()
 MODEL.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=IMAGES[0].shape))
 
 # Conv2D layer
-MODEL.add(Conv2D(6, (3, 3)))
+MODEL.add(Conv2D(9, (5, 5)))
 MODEL.add(MaxPooling2D())
 MODEL.add(Dropout(0.5))
 MODEL.add(Activation('relu'))
 
 # Conv2D layer
-MODEL.add(Conv2D(16, (3, 3)))
+MODEL.add(Conv2D(27, (3, 3)))
 MODEL.add(MaxPooling2D())
 MODEL.add(Dropout(0.5))
 MODEL.add(Activation('relu'))
 
 # Full connected layer
 MODEL.add(Flatten())
-MODEL.add(Dense(80))
-MODEL.add(Dense(20))
+MODEL.add(Dense(300))
+MODEL.add(Dense(150))
 MODEL.add(Dense(1))
 
 MODEL.compile(loss='mse', optimizer='adam')
