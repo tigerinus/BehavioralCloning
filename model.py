@@ -12,7 +12,8 @@ from keras.layers.pooling import MaxPooling2D
 
 DATA_PATH_LIST = [
     '.\\data\\t1r1n',
-    '.\\data\\t1r2r'
+    '.\\data\\t1r2r',
+    #'.\\data\\t2r1n'
 ]
 
 CORRECTION = 0.5
@@ -24,7 +25,7 @@ for data_path in DATA_PATH_LIST:
     csv_path = data_path + '\\driving_log.csv'
     with open(csv_path) as csvfile:
         print('Reading image file listed in \'' +
-              csv_path + '\' and the measurements', end='')
+              csv_path + '\' and the measurements...')
 
         reader = csv.reader(csvfile)
         for line in reader:
@@ -71,12 +72,10 @@ for data_path in DATA_PATH_LIST:
             IMAGES.append(image[crop_offset:, ])
             MEASUREMENTS.append(-measurement)
 
-            print('.', end='', flush=True)
-
 assert IMAGES[0].shape == (99, 320, 3)
-for i in range(6):
-    plt.imshow(IMAGES[i])
-    plt.show()
+#for i in range(6):
+#    plt.imshow(IMAGES[i])
+#    plt.show()
 
 
 X_TRAIN = np.array(IMAGES)
@@ -86,26 +85,31 @@ MODEL = Sequential()
 MODEL.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=IMAGES[0].shape))
 
 # Conv2D layer
-MODEL.add(Conv2D(9, (5, 5)))
-MODEL.add(MaxPooling2D())
-MODEL.add(Dropout(0.5))
+MODEL.add(Conv2D(9, (7, 7)))
 MODEL.add(Activation('relu'))
+MODEL.add(MaxPooling2D())
 
 # Conv2D layer
-MODEL.add(Conv2D(27, (3, 3)))
-MODEL.add(MaxPooling2D())
-MODEL.add(Dropout(0.5))
+MODEL.add(Conv2D(27, (5, 5)))
 MODEL.add(Activation('relu'))
+MODEL.add(MaxPooling2D())
+
+# Conv2D layer
+MODEL.add(Conv2D(81, (3, 3)))
+MODEL.add(Activation('relu'))
+MODEL.add(MaxPooling2D())
 
 # Full connected layer
 MODEL.add(Flatten())
 MODEL.add(Dense(300))
+MODEL.add(Activation('relu'))
 MODEL.add(Dense(150))
+MODEL.add(Activation('relu'))
+MODEL.add(Dropout(0.5))
 MODEL.add(Dense(1))
 
 MODEL.compile(loss='mse', optimizer='adam')
 
-MODEL.fit(X_TRAIN, Y_TRAIN, validation_split=0.3,
-          shuffle=True, epochs=10, verbose=1)
+MODEL.fit(X_TRAIN, Y_TRAIN, validation_split=0.3, shuffle=True, epochs=5)
 
 MODEL.save('model.h5')
