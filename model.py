@@ -1,88 +1,109 @@
 ''' train '''
 import csv
+from random import shuffle
+
 import cv2
 import numpy as np
-
-import matplotlib.pyplot as plt
 
 from keras.models import Sequential
 from keras.layers import Lambda, Flatten, Dense, Activation, Dropout
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 
+IMAGE_SHAPE = (99, 320, 3)
+CORRECTION = 0.5
+MULTIPLIER = 6   # for each line in csv we can feed 6 images to NN
+BATCH_SIZE = 120  # has to be a multple of 6
+VALIDATION_RATIO = 0.3
+
 DATA_PATH_LIST = [
     '.\\data\\t1r1n',
     '.\\data\\t1r2r',
-    #'.\\data\\t2r1n'
+    '.\\data\\t1r3n',
+    '.\\data\\t2r1n',
+    '.\\data\\t2r2r'
 ]
 
-CORRECTION = 0.5
+def get_records(path_list):
+    ''' aggregate data from csv files '''
+    result = []
+    for data_path in path_list:
+        csv_path = data_path + '\\driving_log.csv'
+        with open(csv_path) as csvfile:
+            print('Aggregating image files listed in \'' +
+                  csv_path + '\'...', flush=True)
+            result.extend(list(csv.reader(csvfile)))
+            csvfile.close()
+    return result
 
-IMAGES = []
-MEASUREMENTS = []
+def split_records(records, validation_ratio=0.3):
+    ''' split the records into training data and validation data '''
+    split_point = int(len(records) * (1 - validation_ratio))
+    return (records[:split_point], records[split_point + 1:])
 
-for data_path in DATA_PATH_LIST:
-    csv_path = data_path + '\\driving_log.csv'
-    with open(csv_path) as csvfile:
-        print('Reading image file listed in \'' +
-              csv_path + '\' and the measurements...')
+def generator(records, batch_size, validation=False):
+    ''' generator '''
 
-        reader = csv.reader(csvfile)
-        for line in reader:
+    if validation is False:
+        # Shuffle the records and get those for training
+        shuffle(records)
+        lines, _ = split_records(records)
+    else:
+        # Get records for validation. No need to shuffle
+        _, lines = split_records(records)
+
+    batched_images = []
+    batched_measurements = []
+
+    while True:
+        for line in lines:
             # image - center
             source_path = line[0]
-            filename = source_path.split('\\')[-1]
-            current_path = data_path + '\\IMG\\' + filename
-            image = cv2.imread(current_path)
+            image = cv2.imread(source_path)
             crop_offset = int(image.shape[0] * (1 - 0.618))
-            IMAGES.append(image[crop_offset:, ])
+            batched_images.append(image[crop_offset:, ])
             measurement = float(line[3])
-            MEASUREMENTS.append(measurement)
+            batched_measurements.append(measurement)
 
             # augmenttation - flipped image
             image = cv2.flip(image, 1)
-            IMAGES.append(image[crop_offset:, ])
-            MEASUREMENTS.append(-measurement)
+            batched_images.append(image[crop_offset:, ])
+            batched_measurements.append(-measurement)
 
             # image - left
             source_path = line[1]
-            filename = source_path.split('\\')[-1]
-            current_path = data_path + '\\IMG\\' + filename
-            image = cv2.imread(current_path)
+            image = cv2.imread(source_path)
             crop_offset = int(image.shape[0] * (1 - 0.618))
-            IMAGES.append(image[crop_offset:, ])
-            MEASUREMENTS.append(measurement + CORRECTION)
+            batched_images.append(image[crop_offset:, ])
+            batched_measurements.append(measurement + CORRECTION)
 
             # augmenttation - flipped image
             image = cv2.flip(image, 1)
-            IMAGES.append(image[crop_offset:, ])
-            MEASUREMENTS.append(-measurement)
+            batched_images.append(image[crop_offset:, ])
+            batched_measurements.append(-measurement)
 
             # image - right
             source_path = line[2]
-            filename = source_path.split('\\')[-1]
-            current_path = data_path + '\\IMG\\' + filename
-            image = cv2.imread(current_path)
+            image = cv2.imread(source_path)
             crop_offset = int(image.shape[0] * (1 - 0.618))
-            IMAGES.append(image[crop_offset:, ])
-            MEASUREMENTS.append(measurement - CORRECTION)
+            batched_images.append(image[crop_offset:, ])
+            batched_measurements.append(measurement - CORRECTION)
 
             # augmenttation - flipped image
             image = cv2.flip(image, 1)
-            IMAGES.append(image[crop_offset:, ])
-            MEASUREMENTS.append(-measurement)
+            batched_images.append(image[crop_offset:, ])
+            batched_measurements.append(-measurement)
 
-assert IMAGES[0].shape == (99, 320, 3)
-#for i in range(6):
-#    plt.imshow(IMAGES[i])
-#    plt.show()
+            if len(batched_images) == batch_size:
+                yield (np.array(batched_images), np.array(batched_measurements))
+                batched_images = []
+                batched_measurements = []
 
 
-X_TRAIN = np.array(IMAGES)
-Y_TRAIN = np.array(MEASUREMENTS)
+print("Building model...", flush=True)
 
 MODEL = Sequential()
-MODEL.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=IMAGES[0].shape))
+MODEL.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=IMAGE_SHAPE))
 
 # Conv2D layer
 MODEL.add(Conv2D(9, (7, 7)))
@@ -110,6 +131,15 @@ MODEL.add(Dense(1))
 
 MODEL.compile(loss='mse', optimizer='adam')
 
-MODEL.fit(X_TRAIN, Y_TRAIN, validation_split=0.3, shuffle=True, epochs=5)
+print("Training...", flush=True)
+RECORDS = get_records(DATA_PATH_LIST)
 
+MODEL.fit_generator(
+    generator=generator(RECORDS, BATCH_SIZE),
+    steps_per_epoch=int((len(RECORDS) * MULTIPLIER * (1 - VALIDATION_RATIO) / BATCH_SIZE)),
+    validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
+    validation_steps=int((len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
+    epochs=3)
+
+print("Saving model...", flush=True)
 MODEL.save('model.h5')
