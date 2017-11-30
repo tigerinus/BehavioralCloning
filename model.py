@@ -1,14 +1,12 @@
 ''' train '''
+import argparse
 import csv
 from random import shuffle
 
 import cv2
 import numpy as np
 
-from keras.models import Sequential
-from keras.layers import Lambda, Flatten, Dense, Activation, Dropout
-from keras.layers.convolutional import Conv2D
-from keras.layers.pooling import MaxPooling2D
+from model2 import get_model
 
 IMAGE_SHAPE = (99, 320, 3)
 CORRECTION = 0.5
@@ -20,9 +18,11 @@ DATA_PATH_LIST = [
     '.\\data\\t1r1n',
     '.\\data\\t1r2r',
     '.\\data\\t1r3n',
+    '.\\data\\t1r4r',
     '.\\data\\t2r1n',
     '.\\data\\t2r2r'
 ]
+
 
 def get_records(path_list):
     ''' aggregate data from csv files '''
@@ -36,10 +36,12 @@ def get_records(path_list):
             csvfile.close()
     return result
 
+
 def split_records(records, validation_ratio=0.3):
     ''' split the records into training data and validation data '''
     split_point = int(len(records) * (1 - validation_ratio))
     return (records[:split_point], records[split_point + 1:])
+
 
 def generator(records, batch_size, validation=False):
     ''' generator '''
@@ -100,46 +102,32 @@ def generator(records, batch_size, validation=False):
                 batched_measurements = []
 
 
-print("Building model...", flush=True)
+if __name__ == '__main__':
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('--resume', action='store_true')
+    ARGS = PARSER.parse_args()
 
-MODEL = Sequential()
-MODEL.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=IMAGE_SHAPE))
+    print("Building model...", flush=True)
 
-# Conv2D layer
-MODEL.add(Conv2D(9, (7, 7)))
-MODEL.add(Activation('relu'))
-MODEL.add(MaxPooling2D())
+    MODEL = get_model(IMAGE_SHAPE)
 
-# Conv2D layer
-MODEL.add(Conv2D(27, (5, 5)))
-MODEL.add(Activation('relu'))
-MODEL.add(MaxPooling2D())
+    MODEL.compile(loss='mse', optimizer='adam')
 
-# Conv2D layer
-MODEL.add(Conv2D(81, (3, 3)))
-MODEL.add(Activation('relu'))
-MODEL.add(MaxPooling2D())
+    print("Training...", flush=True)
+    RECORDS = get_records(DATA_PATH_LIST)
 
-# Full connected layer
-MODEL.add(Flatten())
-MODEL.add(Dense(300))
-MODEL.add(Activation('relu'))
-MODEL.add(Dense(150))
-MODEL.add(Activation('relu'))
-MODEL.add(Dropout(0.5))
-MODEL.add(Dense(1))
+    if ARGS.resume:
+        print("Resuming previous training...")
+        MODEL.load_weights('model.h5')
 
-MODEL.compile(loss='mse', optimizer='adam')
+    MODEL.fit_generator(
+        generator=generator(RECORDS, BATCH_SIZE),
+        steps_per_epoch=int((len(RECORDS) * MULTIPLIER *
+                             (1 - VALIDATION_RATIO) / BATCH_SIZE)),
+        validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
+        validation_steps=int(
+            (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
+        epochs=3)
 
-print("Training...", flush=True)
-RECORDS = get_records(DATA_PATH_LIST)
-
-MODEL.fit_generator(
-    generator=generator(RECORDS, BATCH_SIZE),
-    steps_per_epoch=int((len(RECORDS) * MULTIPLIER * (1 - VALIDATION_RATIO) / BATCH_SIZE)),
-    validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
-    validation_steps=int((len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-    epochs=3)
-
-print("Saving model...", flush=True)
-MODEL.save('model.h5')
+    print("Saving model...", flush=True)
+    MODEL.save('model.h5')
