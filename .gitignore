@@ -1,3 +1,4 @@
-model.h5
+model*.h5
+*.7z
 data/
 __pycache__/

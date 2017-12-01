@@ -15,12 +15,18 @@ BATCH_SIZE = 120  # has to be a multple of 6
 VALIDATION_RATIO = 0.3
 
 DATA_PATH_LIST = [
-    '.\\data\\t1r1n',
-    '.\\data\\t1r2r',
-    '.\\data\\t1r3n',
-    '.\\data\\t1r4r',
-    '.\\data\\t2r1n',
-    '.\\data\\t2r2r'
+    '.\\data\\t1r1n',   # track 1 round 1 normal direction
+    '.\\data\\t1r2r',   # track 1 round 2 opposite direction
+    '.\\data\\t1r3n',   # track 1 round 3 normal direction
+    '.\\data\\t1r4r',   # track 1 round 4 opposite direction
+    '.\\data\\t1r5rh',  # track 1 round 5 normal direction (right hand side)
+    '.\\data\\t1r6lh',  # track 1 round 6 normal direction (left hand side)
+    # '.\\data\\t2r1n',   # track 2 round 1 normal direction
+    # '.\\data\\t2r2r',   # track 2 round 2 opposite direction
+    # '.\\data\\t2r3n',   # track 2 round 3 normal direction
+    # '.\\data\\t2r4r',   # track 2 round 4 opposite direction
+    # '.\\data\\t2r5rh',  # track 2 round 5 normal direction (right hand side)
+    # '.\\data\\t2r6lh'   # track 2 round 6 normal direction (left hand side)
 ]
 
 
@@ -127,7 +133,7 @@ if __name__ == '__main__':
         validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
         validation_steps=int(
             (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-        epochs=3)
+        epochs=5)
 
     print("Saving model...", flush=True)
     MODEL.save('model.h5')
