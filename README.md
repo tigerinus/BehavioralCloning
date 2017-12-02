@@ -13,6 +13,9 @@ The goals / steps of this project are the following:
 [image1]: ./images/cnn-architecture-624x890.png "Model Visualization"
 [image2]: ./images/train-stats.png "Metrics"
 [image3]: ./images/resumed-train-stats.png "Metrics (resumed)"
+[image4]: ./images/center.jpg "Center lane driving"
+[image5]: ./images/recover_left.jpg "Recover from left"
+[image6]: ./images/recover_right.jpg "Recover from right"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -98,27 +101,27 @@ Here is a visualization of the reference architecture
 
 #### 3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
-
-![alt text][image3]
-
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+To capture good driving behavior, I first recorded 4 laps on track one using center lane driving, where 2 laps are default direction and the other 2 are opposite direction to help generalization. Here is an example image of center lane driving:
 
 ![alt text][image4]
+
+I then recorded the vehicle driving in zigzags for 2 laps, 1 in default direction and 1 in opposite direction. Here are two images showing 
+
 ![alt text][image5]
-
-Then I repeated this process on track two in order to get more data points.
-
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
-
 ![alt text][image6]
-![alt text][image7]
 
-Etc ....
+However there is a problem. As part of the zigzag driving I had to continue heading to the other side with angle = 0, after recovering from the other side. The training would learn from the images while angle is 0 but heading to the side, and think that it is what it needs to learn. To solve the issue, I went to the ```driving_log.csv``` file, removed rows where angle equals to 0, as well as the corresponding images. After that the recover behavior is working.
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+The code would first read all rows from each ```driving_log.csv``` from each recording, aggregate them into one big list, the shuffle it.
 
+I wrote a ```generator()``` function which takes the shuffled list, and pass the generator to ```fit_generator()``` of the model when training. This way it is able to train all the data without worrying about memory limit, but it is not loading everything into memory all at once. I also use a ```validation``` parameter in the generator function so when it is ```True``` it will return a validation set for validation purpose.
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
+As part of the generator it would flip each image from the data set, as well as the measured angle, in order to augment for more data.
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I had about 65k+ number of data points, including images from augmentation.
+
+I used an adam optimizer so that manually training the learning rate wasn't necessary.
+
+A ```--resume``` parameter is implemented for ```model.py```. When it is specified, Keras will load weights from existing model and continue the training. This way it does not need to train from scratch every time new data is available. 
+
+See ```video.mp4``` for the final result. 

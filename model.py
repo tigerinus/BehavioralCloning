@@ -10,7 +10,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from model2 import get_model
+from cnn import get_model
 
 IMAGE_SHAPE = (99, 320, 3)
 CORRECTION = 0.5
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
         validation_steps=int(
             (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-        epochs=20)
+        epochs=10)
 
     # print the keys contained in the history object
     print(HISTORY.history.keys())
