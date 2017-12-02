@@ -3,6 +3,8 @@ import argparse
 import csv
 from random import shuffle
 
+from os import listdir
+
 import cv2
 import numpy as np
 
@@ -16,22 +18,12 @@ MULTIPLIER = 6   # for each line in csv we can feed 6 images to NN
 BATCH_SIZE = 120  # has to be a multple of 6
 VALIDATION_RATIO = 0.3
 
-DATA_PATH_LIST = [
-    '.\\data\\t1r1n',     # track 1 round 1 normal direction
-    '.\\data\\t1r2r',     # track 1 round 2 opposite direction
-    '.\\data\\t1r3n',     # track 1 round 3 normal direction
-    '.\\data\\t1r4r',     # track 1 round 4 opposite direction
-    '.\\data\\t1r5rh',    # track 1 round 5 normal direction (right hand side)
-    '.\\data\\t1r6lh',    # track 1 round 6 normal direction (left hand side)
-    '.\\data\\t1r7zz',    # track 1 round 7 zigzag
-    '.\\data\\t1r8rzz',   # track 1 round 8 opposite zigzag
-    # '.\\data\\t2r1n',   # track 2 round 1 normal direction
-    # '.\\data\\t2r2r',   # track 2 round 2 opposite direction
-    # '.\\data\\t2r3n',   # track 2 round 3 normal direction
-    # '.\\data\\t2r4r',   # track 2 round 4 opposite direction
-    # '.\\data\\t2r5rh',  # track 2 round 5 normal direction (right hand side)
-    # '.\\data\\t2r6lh'   # track 2 round 6 normal direction (left hand side)
-]
+DATA_PATH = '.\\data\\'
+
+TRACK_NAME = 't1'  # or 't2'
+
+DATA_PATH_LIST = [(DATA_PATH + d)
+                  for d in listdir(DATA_PATH) if d.startswith(TRACK_NAME)]
 
 
 def get_records(path_list):
@@ -137,12 +129,12 @@ if __name__ == '__main__':
         validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
         validation_steps=int(
             (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-        epochs=10)
+        epochs=20)
 
-    ### print the keys contained in the history object
+    # print the keys contained in the history object
     print(HISTORY.history.keys())
 
-    ### plot the training and validation loss for each epoch
+    # plot the training and validation loss for each epoch
     plt.plot(HISTORY.history['loss'])
     plt.plot(HISTORY.history['val_loss'])
     plt.title('model mean squared error loss')
