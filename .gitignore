@@ -1,4 +1,5 @@
 model*.h5
 *.7z
 data/
+run/
 __pycache__/

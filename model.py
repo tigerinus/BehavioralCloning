@@ -6,6 +6,8 @@ from random import shuffle
 import cv2
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 from model2 import get_model
 
 IMAGE_SHAPE = (99, 320, 3)
@@ -15,12 +17,14 @@ BATCH_SIZE = 120  # has to be a multple of 6
 VALIDATION_RATIO = 0.3
 
 DATA_PATH_LIST = [
-    '.\\data\\t1r1n',   # track 1 round 1 normal direction
-    '.\\data\\t1r2r',   # track 1 round 2 opposite direction
-    '.\\data\\t1r3n',   # track 1 round 3 normal direction
-    '.\\data\\t1r4r',   # track 1 round 4 opposite direction
-    '.\\data\\t1r5rh',  # track 1 round 5 normal direction (right hand side)
-    '.\\data\\t1r6lh',  # track 1 round 6 normal direction (left hand side)
+    '.\\data\\t1r1n',     # track 1 round 1 normal direction
+    '.\\data\\t1r2r',     # track 1 round 2 opposite direction
+    '.\\data\\t1r3n',     # track 1 round 3 normal direction
+    '.\\data\\t1r4r',     # track 1 round 4 opposite direction
+    '.\\data\\t1r5rh',    # track 1 round 5 normal direction (right hand side)
+    '.\\data\\t1r6lh',    # track 1 round 6 normal direction (left hand side)
+    '.\\data\\t1r7zz',    # track 1 round 7 zigzag
+    '.\\data\\t1r8rzz',   # track 1 round 8 opposite zigzag
     # '.\\data\\t2r1n',   # track 2 round 1 normal direction
     # '.\\data\\t2r2r',   # track 2 round 2 opposite direction
     # '.\\data\\t2r3n',   # track 2 round 3 normal direction
@@ -117,7 +121,7 @@ if __name__ == '__main__':
 
     MODEL = get_model(IMAGE_SHAPE)
 
-    MODEL.compile(loss='mse', optimizer='adam')
+    MODEL.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
     print("Training...", flush=True)
     RECORDS = get_records(DATA_PATH_LIST)
@@ -126,14 +130,26 @@ if __name__ == '__main__':
         print("Resuming previous training...")
         MODEL.load_weights('model.h5')
 
-    MODEL.fit_generator(
+    HISTORY = MODEL.fit_generator(
         generator=generator(RECORDS, BATCH_SIZE),
         steps_per_epoch=int((len(RECORDS) * MULTIPLIER *
                              (1 - VALIDATION_RATIO) / BATCH_SIZE)),
         validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
         validation_steps=int(
             (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-        epochs=5)
+        epochs=10)
+
+    ### print the keys contained in the history object
+    print(HISTORY.history.keys())
+
+    ### plot the training and validation loss for each epoch
+    plt.plot(HISTORY.history['loss'])
+    plt.plot(HISTORY.history['val_loss'])
+    plt.title('model mean squared error loss')
+    plt.ylabel('mean squared error loss')
+    plt.xlabel('epoch')
+    plt.legend(['training set', 'validation set'], loc='upper right')
+    plt.show()
 
     print("Saving model...", flush=True)
     MODEL.save('model.h5')
