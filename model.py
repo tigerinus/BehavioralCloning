@@ -11,8 +11,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from cnn import get_model
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from keras.utils import plot_model
 
-IMAGE_SHAPE = (99, 320, 3)
+IMAGE_SHAPE = (160, 320, 3)
 CORRECTION = 0.5
 MULTIPLIER = 6   # for each line in csv we can feed 6 images to NN
 BATCH_SIZE = 120  # has to be a multple of 6
@@ -63,39 +65,37 @@ def generator(records, batch_size, validation=False):
         for line in lines:
             # image - center
             source_path = line[0]
-            image = cv2.imread(source_path)
-            crop_offset = int(image.shape[0] * (1 - 0.618))
-            batched_images.append(image[crop_offset:, ])
+            image = cv2.cvtColor(cv2.imread(source_path), cv2.COLOR_BGR2RGB)
+
+            batched_images.append(image)
             measurement = float(line[3])
             batched_measurements.append(measurement)
 
-            # augmenttation - flipped image
+            # augmentation - flipped image
             image = cv2.flip(image, 1)
-            batched_images.append(image[crop_offset:, ])
+            batched_images.append(image)
             batched_measurements.append(-measurement)
 
             # image - left
             source_path = line[1]
-            image = cv2.imread(source_path)
-            crop_offset = int(image.shape[0] * (1 - 0.618))
-            batched_images.append(image[crop_offset:, ])
+            image = cv2.cvtColor(cv2.imread(source_path), cv2.COLOR_BGR2RGB)
+            batched_images.append(image)
             batched_measurements.append(measurement + CORRECTION)
 
-            # augmenttation - flipped image
+            # augmentation - flipped image
             image = cv2.flip(image, 1)
-            batched_images.append(image[crop_offset:, ])
+            batched_images.append(image)
             batched_measurements.append(-measurement)
 
             # image - right
             source_path = line[2]
-            image = cv2.imread(source_path)
-            crop_offset = int(image.shape[0] * (1 - 0.618))
-            batched_images.append(image[crop_offset:, ])
+            image = cv2.cvtColor(cv2.imread(source_path), cv2.COLOR_BGR2RGB)
+            batched_images.append(image)
             batched_measurements.append(measurement - CORRECTION)
 
-            # augmenttation - flipped image
+            # augmentation - flipped image
             image = cv2.flip(image, 1)
-            batched_images.append(image[crop_offset:, ])
+            batched_images.append(image)
             batched_measurements.append(-measurement)
 
             if len(batched_images) == batch_size:
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     print("Building model...", flush=True)
 
     MODEL = get_model(IMAGE_SHAPE)
+    plot_model(MODEL, to_file='model.png')
 
     MODEL.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
@@ -122,6 +123,12 @@ if __name__ == '__main__':
         print("Resuming previous training...")
         MODEL.load_weights('model.h5')
 
+    CALLBACKS = [
+        EarlyStopping(verbose=1, patience=2),
+        ModelCheckpoint(filepath='model.new.h5', save_best_only=True),
+        TensorBoard(write_images=True)
+    ]
+
     HISTORY = MODEL.fit_generator(
         generator=generator(RECORDS, BATCH_SIZE),
         steps_per_epoch=int((len(RECORDS) * MULTIPLIER *
@@ -129,10 +136,7 @@ if __name__ == '__main__':
         validation_data=generator(RECORDS, BATCH_SIZE, validation=True),
         validation_steps=int(
             (len(RECORDS) * MULTIPLIER * VALIDATION_RATIO) / BATCH_SIZE),
-        epochs=10)
-
-    # print the keys contained in the history object
-    print(HISTORY.history.keys())
+        callbacks=CALLBACKS, epochs=99)
 
     # plot the training and validation loss for each epoch
     plt.plot(HISTORY.history['loss'])
@@ -142,6 +146,3 @@ if __name__ == '__main__':
     plt.xlabel('epoch')
     plt.legend(['training set', 'validation set'], loc='upper right')
     plt.show()
-
-    print("Saving model...", flush=True)
-    MODEL.save('model.h5')
