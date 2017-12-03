@@ -11,8 +11,9 @@ The goals/steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./images/cnn-architecture-624x890.png "Model Visualization"
+[model1]: ./images/model.png "Model"
 [image2]: ./images/train-stats.png "Metrics"
-[image3]: ./images/resumed-train-stats.png "Metrics (resumed)"
+[image3]: ./images/train-stats-2.png "Metrics (resumed)"
 [image4]: ./images/center.jpg "Center lane driving"
 [image5]: ./images/recover_left.jpg "Recover from left"
 [image6]: ./images/recover_right.jpg "Recover from right"
@@ -48,8 +49,9 @@ The ```cnn.py``` file contains the actual neural network model.
 
 #### 1. An appropriate model architecture has been employed
 
-
 The model ```cnn.py``` is based on the CNN architecture presented at https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
+
+![alt text][image1] (Courtesy: NVidia)
 
 It consists of a convolution neural network with 5x5 and 3x3 filters sizes and depths between 3 and 64 (```cnn.py``` lines 13-39) 
 
@@ -59,8 +61,9 @@ The model includes RELU layers to introduce nonlinearity, dropout layers for gen
 
 To reduce overfitting, as mentioned previously my modifications to the model include:
 
-* A ReLU activation layer after each Conv2D layer and fully connected layer
-* A max-pool dropout applied after each Conv2D ReLU layer, and a dropout applied after each fully connected layer. (https://arxiv.org/ftp/arxiv/papers/1512/1512.00242.pdf)
+* A ```ELU``` activation layer after each fully connected layer
+* A dropout applied after each fully connected layer
+* L2 regularization as part of each fully connected layer
 
 About 1.5GB of data was also provided as the training set to reduce overfitting.
 
@@ -92,17 +95,14 @@ To combat the overfitting, I modified the model to include max pool dropout and 
 
 ![image2]
 
-However both numbers are still a bit high. The test drive still has problems when dealing with turning at curves. The situation does not improve with extra epochs. So I decided to drive the simulation few extra rounds to provide more training data. Afterall, the metrics showed some improvements:
+However both numbers are still a bit high. The test drive still has problems when dealing with turning at curves. The situation does not improve with either extra epochs or data. Per feedback from Udacity mentor, it's probably due to difference between ```cv2.imread()``` and ```drive.py```. Along with fixing the color space, also made few updates such as removing unneccessary dropouts from ```Conv2D``` layers, switching to use ```ELU``` activation from ```ReLU``` activation, introducing ```EarlyStopping``` callback, etc. Afterall, the metrics showed some improvements:
 
 ![image3]
 
 
 #### 2. Final Model Architecture
 
-
-Here is a visualization of the reference architecture
-
-![alt text][image1] (Courtesy: NVidia)
+![model1]
 
 #### 3. Creation of the Training Set & Training Process
 
