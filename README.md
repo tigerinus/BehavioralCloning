@@ -1,7 +1,7 @@
 # **Behavioral Cloning** 
 
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior
+The goals/steps of this project are the following:
+* Use the simulator to collect data on good driving behavior
 * Build, a convolution neural network in Keras that predicts steering angles from images
 * Train and validate the model with a training and validation set
 * Test that the model successfully drives around track one without leaving the road
@@ -40,35 +40,38 @@ python drive.py model.h5
 
 #### 3. Submission code is usable and readable
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+The ```model.py``` file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
 ### Model Architecture and Training Strategy
 
 #### 1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+The model ```cnn.py``` is based on the CNN architecture presented at https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
+
+It consists of a convolution neural network with 5x5 and 3x3 filters sizes and depths between 3 and 64 (```cnn.py``` lines 13-39) 
+
+The model includes RELU layers to introduce nonlinearity, dropout layers for generalization and the data is normalized in the model using a Keras BatchNormalization layer. 
 
 #### 2. Attempts to reduce overfitting in the model
 
-The model (model2.py) is based on the CNN architecture presented at https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
-
-To reduce overfitting, my modifications to the model include:
+To reduce overfitting, as mentioned previously my modifications to the model include:
 
 * A ReLU activation layer after each Conv2D layer and fully connected layer
 * A max-pool dropout applied after each Conv2D ReLU layer, and a dropout applied after each fully connected layer. (https://arxiv.org/ftp/arxiv/papers/1512/1512.00242.pdf)
 
+About 1.5GB of data was also provided as the training set to reduce overfitting.
+
 #### 3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually.
+The model used an Adam optimizer, so the learning rate was not tuned manually.
 
 #### 4. Appropriate training data
 
 Training data was chosen to keep the vehicle driving on the road. I used a combination of following scenarios:
 
 * Center driving, and center driving in opposite direction
-* Right hand side driving and left hand side driving, and in opposite direction each as well
+* Right-hand side driving and left-hand side driving, and in opposite direction each as well
 * Zigzag driving for recovering training, and in opposite direction as well
 
 For details about how I created the training data, see the next section. 
@@ -79,7 +82,7 @@ For details about how I created the training data, see the next section.
 
 In order to gauge how well the model was working, I split my image and steering angle data into a training (30%) and validation set (70%).
 
-My first step was to use a simple neural network model with just 2 Conv2D layers and 2 fully connected layers, just get started. Later I swiched to use the architecture built by NVidia.
+My first step was to use a simple neural network model with just 2 Conv2D layers and 2 fully connected layers, just get started. Later I switched to use the architecture built by NVidia.
 
 I found that the early version of the model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
 
@@ -110,17 +113,17 @@ I then recorded the vehicle driving in zigzags for 2 laps, 1 in default directio
 ![alt text][image5]
 ![alt text][image6]
 
-However there is a problem. As part of the zigzag driving I had to continue heading to the other side with angle = 0, after recovering from the other side. The training would learn from the images while angle is 0 but heading to the side, and think that it is what it needs to learn. To solve the issue, I went to the ```driving_log.csv``` file, removed rows where angle equals to 0, as well as the corresponding images. After that the recover behavior is working.
+However, there is a problem. As part of the zigzag driving, I had to continue heading to the other side with angle = 0, after recovering from the other side. The training would learn from the images while the angle is 0 but heading to the side, and think that it is what it needs to learn. To solve the issue, I went to the ```driving_log.csv``` file, removed rows where angle equals to 0, as well as the corresponding images. After that, the recovery behavior is working.
 
-The code would first read all rows from each ```driving_log.csv``` from each recording, aggregate them into one big list, the shuffle it.
+The code would first read all rows from each ```driving_log.csv``` from each recording, aggregate them into one big list, then shuffle it.
 
 I wrote a ```generator()``` function which takes the shuffled list, and pass the generator to ```fit_generator()``` of the model when training. This way it is able to train all the data without worrying about memory limit, but it is not loading everything into memory all at once. I also use a ```validation``` parameter in the generator function so when it is ```True``` it will return a validation set for validation purpose.
 
-As part of the generator it would flip each image from the data set, as well as the measured angle, in order to augment for more data.
+As part of the generator, it would flip each image from the data set, as well as the measured angle, in order to augment for more data.
 
 I had about 65k+ number of data points, including images from augmentation.
 
-I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used an Adam optimizer so that manually training the learning rate wasn't necessary.
 
 A ```--resume``` parameter is implemented for ```model.py```. When it is specified, Keras will load weights from existing model and continue the training. This way it does not need to train from scratch every time new data is available. 
 
